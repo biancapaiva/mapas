@@ -1,0 +1,167 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<script	src="https://mapas.stg.cloud.cnj.jus.br/js/OpenLayers-2.12/OpenLayers.js"></script>
+	</head>
+	<div id="map">
+	</div>
+	<button type="button" onclick="mudarCamada()" style="z-index: 999;float: left;top: 1px;position: absolute;">Click Me!</button>
+	<script>
+		OpenLayers.ProxyHost = "proxy.php?url=";
+		var fromProjection = new OpenLayers.Projection("EPSG:4326");
+		var toProjection = new OpenLayers.Projection("EPSG:900913");
+
+		var wms_server = "http://localhost:8080/geoserver/dgie/wms";
+
+		var data = [];
+
+		var map = new OpenLayers.Map({
+			div: "map",
+			projection: toProjection,
+			displayProjection: fromProjection,
+			layers: [new OpenLayers.Layer.OSM("OSM", "", {displayInLayerSwitcher: false, crossOriginKeyword: null})]
+		});
+
+		camada_wms_regsaude = new OpenLayers.Layer.WMS("Reg Saude", wms_server, {
+				layers: "regsaude_consult",
+				transparent: true
+			},
+			{
+				singleTile: true,
+				isBaseLayer: false,
+				visibility: true
+			}
+		);
+
+		map.addLayer(camada_wms_regsaude);
+		map.zoomToMaxExtent();
+		map.setCenter(new OpenLayers.LonLat(-47.765,-15.785).transform(fromProjection, toProjection), 9.5);
+
+		var clickMap = new OpenLayers.Control.WMSGetFeatureInfo({
+	        url: wms_server, 
+	        title: 'Identify features by clicking',
+	        layers: [camada_wms_regsaude],
+	        queryVisible: true,
+	        infoFormat:'application/vnd.ogc.gml',
+	        vendorParams:{
+				buffer: 10
+			},
+	        eventListeners: {
+	            getfeatureinfo: function(event) {
+	            	features = event;
+	            	console.log(features);
+	            	 map.addPopup(createPop(features));
+	            },
+	        },
+	    });
+
+	    map.addControl(clickMap);
+    	clickMap.activate();
+
+		function mudarCamada(){
+			if (camada_wms_regsaude.params['LAYERS'] == 'regsaude_consult'){
+				camada_wms_regsaude.mergeNewParams({layers: "ubs_pontos_123", styles: "ubs"});
+			}
+			else{
+				camada_wms_regsaude.mergeNewParams({layers: "regsaude_consult", styles: "style"});	
+			}
+		}
+
+		function createPop(features){
+			pop = new OpenLayers.Popup.FramedCloud(
+                "Pop Up",
+                map.getLonLatFromPixel(features.xy),
+                null,
+                GenPopText(features),
+                null,
+                true
+            );
+			pop.autoSize = true;
+			pop.maxSize = new OpenLayers.Size(600,800);
+			pop.fixedRelativePosition = true;
+			return pop;
+		}
+
+		function removeAllPopUps(){
+			for (i=map.popups.length-1; i >= 0; i--){
+				map.popups[i].destroy();
+			}
+		}
+
+		function abrirUbs(cnes){
+			console.log(data);
+			for (i=0; i < data.length; i++){
+				if (data[i]['cnes'] == cnes){
+					alert(cnes);
+					long = data[i]['long'];
+					lat = data[i]['lat'];
+					long = long.toFixed(8);
+					lat = lat.toFixed(8);
+					removeAllPopUps();
+					pop = new OpenLayers.Popup.FramedCloud(
+		                "Pop Up",
+		                new OpenLayers.LonLat(long, lat),
+		                null,
+		                'teste',
+		                null,
+		                true
+		            );
+					pop.autoSize = true;
+					pop.maxSize = new OpenLayers.Size(600,800);
+					pop.fixedRelativePosition = true;
+					map.addPopup(pop);
+					return;
+				}
+			}
+		}
+
+		function GenPopText(features){
+			feature = features.features[0];
+			console.log("Função de criação do texto.");
+			console.log(feature);
+			html = '<table id="tabela_dados">';
+				if (feature.gml.featureType == 'regsaude_consult'){
+					html += '<tr>';
+						html += '<td><b>Nome:</b> </td>';
+						html += '<td>' + feature.data['regiao_ra_'] + '</td>';
+					html += '</tr>';
+					html += '<tr>';
+						html += '<td><b>Quantidade consultas:</b> </td>';
+						html += '<td>' + feature.data['qtd_consul'] + '</td>';
+					html += '</tr>';
+				}
+				else{
+					if (features.features.length > 1){
+						for (i = 0; i < features.features.length; i++){
+							dataAux = {'cnes':features.features[i].data['CNES'],'nome':features.features[i].data['NOME_FANTA'],'tipo':features.features[i].data['TP_UNIDADE'],'logradouro':features.features[i].data['LOGRADOURO'], 'consultas':features.features[i].data['qtd_consul'], 'long':features.features[i].geometry.x, 'lat':features.features[i].geometry.y};
+				    		data.push(dataAux);
+							html += '<tr>';
+								html += '<td><b>Nome:</b> </td>';
+								html += '<td><button type="button" onclick="abrirUbs('+ features.features[i].data['CNES'] +')">' + features.features[i].data['NOME_FANTA'] + '</button></td>';
+							html += '</tr>';
+						}
+					}
+					else{
+						html += '<tr>';
+							html += '<td><b>Nome:</b> </td>';
+							html += '<td>' + feature.data['NOME_FANTA'] + '</td>';
+						html += '</tr>';
+						html += '<tr>';
+							html += '<td><b>Tipo:</b> </td>';
+							html += '<td>' + feature.data['TP_UNIDADE'] + '</td>';
+						html += '</tr>';
+						html += '<tr>';
+							html += '<td><b>Logradouro:</b> </td>';
+							html += '<td>' + feature.data['LOGRADOURO'] + '</td>';
+						html += '</tr>';
+						html += '<tr>';
+							html += '<td><b>Quantidade consultas:</b> </td>';
+							html += '<td>' + feature.data['qtd_consul'] + '</td>';
+						html += '</tr>';
+					}
+				}
+			html += '</table>';
+			return html
+		}
+	</script>
+</html>
