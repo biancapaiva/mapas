@@ -14,7 +14,7 @@
 		var wms_server = "http://localhost:8080/geoserver/dgie/wms";
 
 		var data = [];
-
+		
 		var map = new OpenLayers.Map({
 			div: "map",
 			projection: toProjection,
@@ -92,7 +92,10 @@
 			console.log(data);
 			for (i=0; i < data.length; i++){
 				if (data[i]['cnes'] == cnes){
-					alert(cnes);
+					nome = data[i]['nome'];
+					tipo = data[i]['tipo'];
+					logradouro = data[i]['logradouro'];
+					consultas = data[i]['consultas'];
 					long = data[i]['long'];
 					lat = data[i]['lat'];
 					long = long.toFixed(8);
@@ -102,7 +105,7 @@
 		                "Pop Up",
 		                new OpenLayers.LonLat(long, lat),
 		                null,
-		                'teste',
+		                gerarHtml(nome, tipo, logradouro, consultas),
 		                null,
 		                true
 		            );
@@ -113,6 +116,28 @@
 					return;
 				}
 			}
+		}
+
+		function gerarHtml(nome, tipo, logradouro, consultas){
+			html = '<table id="tabela_dados">';
+			html += '<tr>';
+				html += '<td><b>Nome:</b> </td>';
+				html += '<td>' + nome + '</td>';
+			html += '</tr>';
+			html += '<tr>';
+				html += '<td><b>Tipo:</b> </td>';
+				html += '<td>' + tipo + '</td>';
+			html += '</tr>';
+			html += '<tr>';
+				html += '<td><b>Logradouro:</b> </td>';
+				html += '<td>' + logradouro + '</td>';
+			html += '</tr>';
+			html += '<tr>';
+				html += '<td><b>Quantidade consultas:</b> </td>';
+				html += '<td>' + consultas + '</td>';
+			html += '</tr>';
+			html += '</table>';
+			return html
 		}
 
 		function GenPopText(features){
