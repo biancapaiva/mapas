@@ -12,6 +12,7 @@
 		var toProjection = new OpenLayers.Projection("EPSG:900913");
 
 		var wms_server = "http://localhost:8080/geoserver/dgie/wms";
+		var wfs_pontos = "http://localhost:8080/geoserver/dgie/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=dgie%3Aubs_pontos_123&maxFeatures=50&cql_filter=CNES=11355&outputFormat=application%2Fjson";
 
 		var data = [];
 		
@@ -33,7 +34,22 @@
 			}
 		);
 
+		camada_wfs_ubs = new OpenLayers.Layer.Vector("WFS-UBS", {
+		    displayInLayerSwitcher:false,
+		    strategies: [new OpenLayers.Strategy.Fixed()],
+		    protocol: new OpenLayers.Protocol.HTTP({
+		        url: wfs_pontos,
+		        format: new OpenLayers.Format.GeoJSON({
+		        	ignoreExtraDims: true,
+		        	'internalProjection': new OpenLayers.Projection("EPSG:900913"),
+	            	'externalProjection': new OpenLayers.Projection("EPSG:4326")
+		        })
+	    	})
+	    });
+	    camada_wfs_ubs.setOpacity(0);
+	    
 		map.addLayer(camada_wms_regsaude);
+		map.addLayer(camada_wfs_ubs);
 		map.zoomToMaxExtent();
 		map.setCenter(new OpenLayers.LonLat(-47.765,-15.785).transform(fromProjection, toProjection), 9.5);
 
@@ -140,6 +156,87 @@
 			return html
 		}
 
+		function getUbs() {
+			return new Promise(resolve => {
+				setTimeout(() => {
+					resolve(camada_wfs_ubs.features.length);
+				}, 1000);
+			});
+		}
+
+		async function htmlUbs(fid, cnes) {
+			camada_wfs_ubs.destroy();
+			wfs_pontos = "http://localhost:8080/geoserver/dgie/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=dgie%3Aubs_pontos_123&maxFeatures=50&cql_filter=CNES=" + cnes + "&outputFormat=application%2Fjson";
+			camada_wfs_ubs = new OpenLayers.Layer.Vector("WFS-UBS", {
+			    displayInLayerSwitcher:false,
+			    strategies: [new OpenLayers.Strategy.Fixed()],
+			    protocol: new OpenLayers.Protocol.HTTP({
+			        url: wfs_pontos,
+			        format: new OpenLayers.Format.GeoJSON({
+			        	ignoreExtraDims: true,
+			        	'internalProjection': new OpenLayers.Projection("EPSG:900913"),
+		            	'externalProjection': new OpenLayers.Projection("EPSG:4326")
+			        })
+		    	})
+		    });
+		    camada_wfs_ubs.setOpacity(0);
+		    map.addLayer(camada_wfs_ubs);
+			
+			var a = getUbs();
+			var features = await a;
+			if (features <= 0){
+				console.log("Sem features");
+				htmlUbs();
+			}
+			else{
+				console.log("Tenho features");
+				/*console.log(camada_wfs_ubs.getFeatureByFid(fid));
+				console.log(camada_wfs_ubs);*/
+				html = '<table id="tabela_dados">';
+				html += '<tr>';
+					html += '<td><b>Nome:</b> </td>';
+					html += '<td>' + camada_wfs_ubs.getFeatureByFid(fid).data['NOME_FANTA'] + '</td>';
+				html += '</tr>';
+				html += '<tr>';
+					html += '<td><b>Tipo:</b> </td>';
+					html += '<td>' + camada_wfs_ubs.getFeatureByFid(fid).data['TP_UNIDADE'] + '</td>';
+				html += '</tr>';
+				html += '<tr>';
+					html += '<td><b>Logradouro:</b> </td>';
+					html += '<td>' + camada_wfs_ubs.getFeatureByFid(fid).data['LOGRADOURO'] + '</td>';
+				html += '</tr>';
+				html += '<tr>';
+					html += '<td><b>Quantidade consultas:</b> </td>';
+					html += '<td>' + camada_wfs_ubs.getFeatureByFid(fid).data['qtd_consul'] + '</td>';
+				html += '</tr>';
+				html += '</table>';
+				console.log(html);
+				removeAllPopUps();
+				pop = new OpenLayers.Popup.FramedCloud(
+	                "Pop Up",
+	                new OpenLayers.LonLat(camada_wfs_ubs.getFeatureByFid(fid).geometry.x, camada_wfs_ubs.getFeatureByFid(fid).geometry.y),
+	                null,
+	                html,
+	                null,
+	                true
+	            );
+				pop.autoSize = true;
+				pop.maxSize = new OpenLayers.Size(600,800);
+				pop.fixedRelativePosition = true;
+				map.addPopup(pop);
+			}
+			return false;
+		}
+
+		function htmlUbs2(cnes){
+			console.log("Camada wfs");
+			getData().then(v => {
+				console.log(v);  // exibe 60 depois de 2 segundos.
+			});
+			console.log("Teste");
+			return false;
+		}
+
 		function GenPopText(features){
 			feature = features.features[0];
 			console.log("Função de criação do texto.");
@@ -157,12 +254,18 @@
 				}
 				else{
 					if (features.features.length > 1){
-						for (i = 0; i < features.features.length; i++){
+						/*for (i = 0; i < features.features.length; i++){
 							dataAux = {'cnes':features.features[i].data['CNES'],'nome':features.features[i].data['NOME_FANTA'],'tipo':features.features[i].data['TP_UNIDADE'],'logradouro':features.features[i].data['LOGRADOURO'], 'consultas':features.features[i].data['qtd_consul'], 'long':features.features[i].geometry.x, 'lat':features.features[i].geometry.y};
 				    		data.push(dataAux);
 							html += '<tr>';
 								html += '<td><b>Nome:</b> </td>';
 								html += '<td><button type="button" onclick="abrirUbs('+ features.features[i].data['CNES'] +')">' + features.features[i].data['NOME_FANTA'] + '</button></td>';
+							html += '</tr>';
+						}*/
+						for (i = 0; i < features.features.length; i++){
+							html += '<tr>';
+								html += '<td><b>Nome:</b> </td>';
+								html += '<td><button type="button" onclick="htmlUbs('+ "'" + features.features[i].fid + "', " + "'" + features.features[i].data['CNES'] + "'" +')">' + features.features[i].data['NOME_FANTA'] + '</button></td>';
 							html += '</tr>';
 						}
 					}
