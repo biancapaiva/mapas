@@ -2,10 +2,23 @@
 	<head>
 		<meta charset="UTF-8">
 		<script	src="https://mapas.stg.cloud.cnj.jus.br/js/OpenLayers-2.12/OpenLayers.js"></script>
+		<script type="text/javascript" src="https://mapas.stg.cloud.cnj.jus.br/js/jModalWindow.js"></script>
+		<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css">
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.js"></script>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 	</head>
 	<div id="map">
 	</div>
 	<button type="button" onclick="mudarCamada()" style="z-index: 999;float: left;top: 1px;position: absolute;">Click Me!</button>
+	<div id='modalLoad' class='modal fade' role='dialog' aria-labelledby='myModalLabel' aria-hidden='true'>
+		<div align="center">
+			<img border='0' jstcache='130' style="width:540px; height:auto;opacity:1;" src='https://upload.wikimedia.org/wikipedia/commons/2/29/Loader.gif'>
+			<div style='clear: both'></div>
+		</div>
+	</div>
 	<script>
 		OpenLayers.ProxyHost = "proxy.php?url=";
 		var fromProjection = new OpenLayers.Projection("EPSG:4326");
@@ -160,11 +173,12 @@
 			return new Promise(resolve => {
 				setTimeout(() => {
 					resolve(camada_wfs_ubs.features.length);
-				}, 1000);
+				}, 2000);
 			});
 		}
 
 		async function htmlUbs(fid, cnes) {
+			$("#modalLoad").modal();
 			camada_wfs_ubs.destroy();
 			wfs_pontos = "http://localhost:8080/geoserver/dgie/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=dgie%3Aubs_pontos_123&maxFeatures=50&cql_filter=CNES=" + cnes + "&outputFormat=application%2Fjson";
 			camada_wfs_ubs = new OpenLayers.Layer.Vector("WFS-UBS", {
@@ -224,6 +238,7 @@
 				pop.maxSize = new OpenLayers.Size(600,800);
 				pop.fixedRelativePosition = true;
 				map.addPopup(pop);
+				$("#modalLoad").modal('hide');
 			}
 			return false;
 		}
